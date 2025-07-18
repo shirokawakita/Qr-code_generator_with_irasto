@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>URL QRコード生成アプリ</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+            transform: translateY(0);
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .title {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+
+        .input-group {
+            margin-bottom: 30px;
+        }
+
+        .url-input {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 50px;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .url-input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .url-input::placeholder {
+            color: #999;
+        }
+
+        .icon-selector {
+            margin: 15px 0;
+        }
+
+        .icon-selector label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+            text-align: left;
+        }
+
+        .image-upload {
+            display: none;
+        }
+
+        .upload-area {
+            width: 100%;
+            min-height: 80px;
+            border: 2px dashed #e0e0e0;
+            border-radius: 15px;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #667eea;
+            background: #e3f2fd;
+            transform: scale(1.02);
+        }
+
+        .upload-text {
+            color: #666;
+            font-size: 14px;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .preview-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .image-preview {
+            max-width: 80px;
+            max-height: 80px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        .remove-image {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .generate-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+            min-width: 150px;
+        }
+
+        .generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .generate-btn:active {
+            transform: translateY(0);
+        }
+
+        .generate-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .qr-container {
+            margin-top: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            opacity: 0;
+            transform: scale(0.8);
+            transition: all 0.3s ease;
+        }
+
+        .qr-container.show {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .qr-code {
+            position: relative;
+            display: inline-block;
+            margin: 10px 0;
+        }
+
+        .qr-code svg {
+            width: 200px;
+            height: 200px;
+            border: 8px solid white;
+            border-radius: 10px;
+            background: white;
+        }
+
+        .qr-icon-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            background: white;
+            padding: 4px;
+            border-radius: 6px;
+            border: 2px solid #333;
+            z-index: 10;
+        }
+
+        .url-display {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            word-break: break-all;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .download-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .download-btn:hover {
+            background: #218838;
+            transform: translateY(-1px);
+        }
+
+        .error-message {
+            color: #dc3545;
+            margin-top: 10px;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .error-message.show {
+            opacity: 1;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 30px 20px;
+                margin: 10px;
+            }
+            
+            .title {
+                font-size: 24px;
+            }
+            
+            .url-input {
+                padding: 12px 16px;
+                font-size: 14px;
+            }
+            
+            .generate-btn {
+                padding: 12px 24px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">🔗 QRコード生成</h1>
+        <p class="subtitle">URLを入力してQRコードを生成しよう</p>
+        
+        <div class="input-group">
+            <input type="text" 
+                   class="url-input" 
+                   id="urlInput" 
+                   placeholder="https://example.com を入力してください"
+                   autocomplete="url">
+            
+            <div class="icon-selector">
+                <label for="imageUpload">中央のイラスト（任意の画像をアップロード）:</label>
+                <input type="file" id="imageUpload" class="image-upload" accept="image/*">
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-text">
+                        📁 画像をクリックして選択またはドラッグ&ドロップ
+                    </div>
+                    <div class="preview-container" id="previewContainer" style="display: none;">
+                        <img id="imagePreview" class="image-preview" alt="プレビュー">
+                        <button type="button" class="remove-image" id="removeImage">×</button>
+                    </div>
+                </div>
+            </div>
+            
+            <button class="generate-btn" id="generateBtn">QRコード生成</button>
+            <div class="error-message" id="errorMessage"></div>
+        </div>
+        
+        <div class="qr-container" id="qrContainer">
+            <div class="qr-code" id="qrCode"></div>
+            <div class="url-display" id="urlDisplay"></div>
+            <button class="download-btn" id="downloadBtn">PNG画像をダウンロード</button>
+        </div>
+    </div>
+
+    <script>
+        class QRCodeGenerator {
+            constructor() {
+                this.urlInput = document.getElementById('urlInput');
+                this.generateBtn = document.getElementById('generateBtn');
+                this.imageUpload = document.getElementById('imageUpload');
+                this.uploadArea = document.getElementById('uploadArea');
+                this.previewContainer = document.getElementById('previewContainer');
+                this.imagePreview = document.getElementById('imagePreview');
+                this.removeImage = document.getElementById('removeImage');
+                this.qrContainer = document.getElementById('qrContainer');
+                this.qrCode = document.getElementById('qrCode');
+                this.urlDisplay = document.getElementById('urlDisplay');
+                this.downloadBtn = document.getElementById('downloadBtn');
+                this.errorMessage = document.getElementById('errorMessage');
+                this.currentCanvas = null;
+                this.selectedImage = null;
+                
+                this.init();
+            }
+            
+            init() {
+                this.generateBtn.addEventListener('click', () => this.generateQRCode());
+                this.urlInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.generateQRCode();
+                    }
+                });
+                this.urlInput.addEventListener('input', () => this.hideError());
+                this.downloadBtn.addEventListener('click', () => this.downloadQRCode());
+                
+                // 画像アップロード関連のイベント
+                this.uploadArea.addEventListener('click', () => this.imageUpload.click());
+                this.imageUpload.addEventListener('change', (e) => this.handleImageSelect(e));
+                this.removeImage.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.clearImage();
+                });
+                
+                // ドラッグ&ドロップ
+                this.uploadArea.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    this.uploadArea.classList.add('dragover');
+                });
+                this.uploadArea.addEventListener('dragleave', () => {
+                    this.uploadArea.classList.remove('dragover');
+                });
+                this.uploadArea.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    this.uploadArea.classList.remove('dragover');
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0 && files[0].type.startsWith('image/')) {
+                        this.processImage(files[0]);
+                    }
+                });
+            }
+            
+            isValidURL(string) {
+                try {
+                    // URLが相対パスの場合はhttps://を追加
+                    if (!string.startsWith('http://') && !string.startsWith('https://')) {
+                        string = 'https://' + string;
+                    }
+                    new URL(string);
+                    return string;
+                } catch (_) {
+                    return false;
+                }
+            }
+            
+            showError(message) {
+                this.errorMessage.textContent = message;
+                this.errorMessage.classList.add('show');
+            }
+            
+            hideError() {
+                this.errorMessage.classList.remove('show');
+            }
+            
+            generateQRCode() {
+                const url = this.urlInput.value.trim();
+                
+                if (!url) {
+                    this.showError('URLを入力してください');
+                    return;
+                }
+                
+                const validURL = this.isValidURL(url);
+                if (!validURL) {
+                    this.showError('有効なURLを入力してください');
+                    return;
+                }
+                
+                this.hideError();
+                this.generateBtn.disabled = true;
+                this.generateBtn.textContent = '生成中...';
+                
+                // QRコードのクリア
+                this.qrCode.innerHTML = '';
+                
+                try {
+                    // QRコード生成（エラー訂正レベルを高に設定）
+                    const qr = qrcode(0, 'H'); // 'H'は高エラー訂正レベル（約30%の復元可能）
+                    qr.addData(validURL);
+                    qr.make();
+                    
+                    // SVGとして生成
+                    const svgString = qr.createSvgTag(4, 2);
+                    this.qrCode.innerHTML = svgString;
+                    
+                    // 選択された画像を中央に配置
+                    if (this.selectedImage) {
+                        this.addImageOverlay();
+                    }
+                    
+                    // Canvas作成
+                    this.createCanvas(validURL, this.selectedImage);
+                    
+                    this.urlDisplay.textContent = validURL;
+                    this.urlInput.value = validURL;
+                    
+                    // アニメーション付きで表示
+                    setTimeout(() => {
+                        this.qrContainer.classList.add('show');
+                    }, 100);
+                    
+                } catch (error) {
+                    this.showError('QRコードの生成に失敗しました');
+                } finally {
+                    this.generateBtn.disabled = false;
+                    this.generateBtn.textContent = 'QRコード生成';
+                }
+            }
+            
+            handleImageSelect(e) {
+                const file = e.target.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    this.processImage(file);
+                }
+            }
+            
+            processImage(file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        this.selectedImage = img;
+                        this.imagePreview.src = e.target.result;
+                        this.previewContainer.style.display = 'block';
+                        this.uploadArea.querySelector('.upload-text').style.display = 'none';
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+            
+            clearImage() {
+                this.selectedImage = null;
+                this.imageUpload.value = '';
+                this.previewContainer.style.display = 'none';
+                this.uploadArea.querySelector('.upload-text').style.display = 'block';
+                
+                // QRコードからもアイコンを削除
+                const existingOverlay = this.qrCode.querySelector('.qr-image-overlay');
+                if (existingOverlay) {
+                    existingOverlay.remove();
+                }
+            }
+            
+            addImageOverlay() {
+                // 既存の画像オーバーレイを削除
+                const existingOverlay = this.qrCode.querySelector('.qr-image-overlay');
+                if (existingOverlay) {
+                    existingOverlay.remove();
+                }
+                
+                if (!this.selectedImage) return;
+                
+                const overlayDiv = document.createElement('div');
+                overlayDiv.className = 'qr-image-overlay';
+                overlayDiv.style.position = 'absolute';
+                overlayDiv.style.top = '50%';
+                overlayDiv.style.left = '50%';
+                overlayDiv.style.transform = 'translate(-50%, -50%)';
+                overlayDiv.style.width = '40px';
+                overlayDiv.style.height = '40px';
+                overlayDiv.style.background = 'white';
+                overlayDiv.style.borderRadius = '6px';
+                overlayDiv.style.border = '2px solid #333';
+                overlayDiv.style.zIndex = '10';
+                overlayDiv.style.overflow = 'hidden';
+                
+                const overlayImg = document.createElement('img');
+                overlayImg.src = this.selectedImage.src;
+                overlayImg.style.width = '100%';
+                overlayImg.style.height = '100%';
+                overlayImg.style.objectFit = 'cover';
+                overlayImg.style.filter = 'contrast(100%) brightness(0)'; // シルエット効果
+                
+                overlayDiv.appendChild(overlayImg);
+                this.qrCode.appendChild(overlayDiv);
+            }
+            
+            createCanvas(url, imageElement) {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = 256;
+                canvas.height = 256;
+                
+                // QRコードを再生成してCanvasに描画
+                const qr = qrcode(0, 'H');
+                qr.addData(url);
+                qr.make();
+                
+                // QRコードのモジュールを取得
+                const moduleCount = qr.getModuleCount();
+                const cellSize = 256 / moduleCount;
+                
+                // 白背景
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, 256, 256);
+                
+                // QRコードを描画
+                ctx.fillStyle = 'black';
+                for (let row = 0; row < moduleCount; row++) {
+                    for (let col = 0; col < moduleCount; col++) {
+                        if (qr.isDark(row, col)) {
+                            // 中央部分は画像のために空ける
+                            const centerStart = Math.floor(moduleCount * 0.35);
+                            const centerEnd = Math.floor(moduleCount * 0.65);
+                            
+                            if (imageElement && row >= centerStart && row < centerEnd && 
+                                col >= centerStart && col < centerEnd) {
+                                continue; // 中央部分はスキップ
+                            }
+                            
+                            ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+                        }
+                    }
+                }
+                
+                // 画像をシルエットとして描画
+                if (imageElement) {
+                    const centerX = 128;
+                    const centerY = 128;
+                    const imageSize = 50;
+                    const bgSize = 60;
+                    
+                    // 白い背景
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(centerX - bgSize/2, centerY - bgSize/2, bgSize, bgSize);
+                    
+                    // 枠線
+                    ctx.strokeStyle = 'black';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(centerX - bgSize/2, centerY - bgSize/2, bgSize, bgSize);
+                    
+                    // 画像をシルエットとして描画
+                    this.drawImageSilhouette(ctx, imageElement, centerX - imageSize/2, centerY - imageSize/2, imageSize, imageSize);
+                }
+                
+                this.currentCanvas = canvas;
+            }
+            
+            drawImageSilhouette(ctx, img, x, y, width, height) {
+                // 一時的なcanvasを作成して画像を処理
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCanvas.width = width;
+                tempCanvas.height = height;
+                
+                // 画像を描画
+                tempCtx.drawImage(img, 0, 0, width, height);
+                
+                // ピクセルデータを取得
+                const imageData = tempCtx.getImageData(0, 0, width, height);
+                const data = imageData.data;
+                
+                // シルエット用の新しいImageDataを作成
+                const silhouetteData = tempCtx.createImageData(width, height);
+                const silhouette = silhouetteData.data;
+                
+                for (let i = 0; i < data.length; i += 4) {
+                    const alpha = data[i + 3];
+                    
+                    if (alpha > 128) { // 半透明以上の部分
+                        // 黒いシルエットにする
+                        silhouette[i] = 0;     // Red
+                        silhouette[i + 1] = 0; // Green
+                        silhouette[i + 2] = 0; // Blue
+                        silhouette[i + 3] = 255; // Alpha
+                    } else {
+                        // 透明部分はそのまま
+                        silhouette[i + 3] = 0;
+                    }
+                }
+                
+                // シルエットを描画
+                tempCtx.putImageData(silhouetteData, 0, 0);
+                ctx.drawImage(tempCanvas, x, y);
+            }
+            
+            downloadQRCode() {
+                if (!this.currentCanvas) {
+                    this.showError('QRコードを先に生成してください');
+                    return;
+                }
+                
+                const link = document.createElement('a');
+                link.download = 'qrcode.png';
+                link.href = this.currentCanvas.toDataURL();
+                link.click();
+            }
+        }
+        
+        // アプリケーション初期化
+        document.addEventListener('DOMContentLoaded', () => {
+            new QRCodeGenerator();
+        });
+    </script>
+</body>
+</html>
